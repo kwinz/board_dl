@@ -1,18 +1,21 @@
-
-
-import urllib2
+import urllib3
 import sys
 import os
 import traceback
 import re
-import urllib2
 from timeit import default_timer as timer
 import argparse
+from multiprocessing import Process, Queue
+import certifi
+from pathlib import Path
+
+
+userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36'
+imgReg = r"\/\/is[1-3]\.4chan\.org\/[a-z]{1,6}\/[a-z|0-9]+\.(?:gif|jpeg|webm)"
+myheaders = {'User-Agent': userAgent}
 
 
 def main():
-    userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36'
-    imgReg = "\/\/is[1-3]\.4chan\.org\/[a-z]{1,6}\/[a-z|0-9]+\.(?:gif|jpeg|webm)"
 
     parser = argparse.ArgumentParser(
         description='Downloads all media from a 4chan thread.')
@@ -21,7 +24,7 @@ def main():
 
     args = parser.parse_args()
 
-    #url = 'https://boards.4chan.org/gif/thread/12891600/1010-bodies-and-face'
+    # url = 'https://boards.4chan.org/gif/thread/12891600/1010-bodies-and-face'
     url = args.url
 
     location_of_thread_substring_in_url = url.find("thread")
@@ -35,45 +38,65 @@ def main():
 
     thread_number_str = url[location_of_thread_substring_in_url +
                             len("thread")+1:location_of_backslash_after_thread_number]
-    print ("Thread number: "+thread_number_str)
+    print("Thread number: "+thread_number_str)
 
-    try:
-        opener = urllib2.build_opener()
-        opener.addheaders = [('User-Agent', userAgent)]
+    begin_download_time = timer()
+    http_pool = urllib3.PoolManager(
+        cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
+    response = http_pool.request('GET', url, headers=myheaders)
+    end_download_time = timer()
+    print("Downloaded '"+url+"' in " +
+          str(end_download_time - begin_download_time)+" s")
 
-        begin_download_time = timer()
-        response = opener.open(url)
-        html = response.read()
-        end_download_time = timer()
-        print("Downloaded '"+url+"' in " +
-              str(end_download_time - begin_download_time)+" ms")
+    # print(str(response.data))
 
-        #print (html)
+    begin_match_time = timer()
+    media_reg_pattern = re.compile(imgReg)
+    matches = media_reg_pattern.findall(str(response.data))
+    matches = list(set(matches))
+    end_match_time = timer()
+    print("Parsing finished in "+str(end_match_time - begin_match_time)+" s")
+    print("Found "+str(len(matches))+" media urls")
 
-        begin_match_time = timer()
-        p = re.compile(imgReg)
-        matches = p.findall(html)
-        matches = list(set(matches))
-        end_match_time = timer()
-        print("Parsing finished in "+str(end_match_time - begin_match_time)+" ms")
-        print("Found "+str(len(matches))+" media urls")
+    ensure_dir(thread_number_str)
 
-        ensure_dir(thread_number_str)
+    processes = []
 
-        i = 0
-        for match in matches:
-            opener2 = urllib2.build_opener()
-            opener2.addheaders = [('User-Agent', userAgent)]
-            fullImgUrl = "https:"+str(match)
-            print(fullImgUrl)
-            response2 = opener2.open(fullImgUrl)
-            with open(thread_number_str+"/safsadfsfasdf"+str(i)+".jpg", 'wb') as fout:
-                fout.write(response2.read())
-            i = i+1
-    except urllib2.HTTPError as err:
-        print (err)
-        print (err.msg)
-        sys.exit(1)
+    begin_download_media_time = timer()
+    for match in matches:
+        fullImgUrl = "https:"+str(match)
+        file_name = fullImgUrl[fullImgUrl.rfind("/")+1:]
+        target_path = thread_number_str+"/"+file_name
+        process = Process(target=downloadAndSaveMediaFile,
+                          args=(fullImgUrl, target_path))
+        process.start()
+        processes.append(process)
+
+    for process in processes:
+        process.join()
+
+    end_download_media_time = timer()
+
+    print("Downloaded all media in " +
+          str(end_download_media_time - begin_download_media_time)+" s")
+
+
+def downloadAndSaveMediaFile(fullImgUrl, target_path):
+
+    my_file = Path(target_path)
+    if my_file.is_file() and my_file.stat().st_size > 0:
+        print("already downloaded "+target_path+" SKIPPING")
+        return
+
+    print("Downloading: "+fullImgUrl)
+    print("Path: " + target_path)
+
+    http_pool = urllib3.PoolManager(
+        cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
+    response = http_pool.request('GET', fullImgUrl, headers=myheaders)
+
+    with open(target_path, 'wb') as fout:
+        fout.write(response.data)
 
 
 def ensure_dir(directory):
