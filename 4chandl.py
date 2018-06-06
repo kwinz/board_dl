@@ -27,11 +27,16 @@ def main():
     # url = 'https://boards.4chan.org/gif/thread/12891600/1010-bodies-and-face'
     url = args.url
 
+    location_of_org_substring_in_url = url.find("org")
     location_of_thread_substring_in_url = url.find("thread")
 
-    if location_of_thread_substring_in_url == -1:
+    if location_of_org_substring_in_url == -1 or location_of_thread_substring_in_url == -1:
         print("URL has to be 4chan thread url")
         exit(1)
+
+    board_str = url[location_of_org_substring_in_url +
+                    4:location_of_thread_substring_in_url-1]
+    print("Board: /"+board_str)
 
     location_of_backslash_after_thread_number = url.find(
         "/", location_of_thread_substring_in_url+len("thread")+1)
@@ -58,15 +63,14 @@ def main():
     print("Parsing finished in "+str(end_match_time - begin_match_time)+" s")
     print("Found "+str(len(matches))+" media urls")
 
-    ensure_dir(thread_number_str)
+    ensure_dir(board_str+"/"+thread_number_str)
 
     processes = []
-
     begin_download_media_time = timer()
     for match in matches:
         fullImgUrl = "https:"+str(match)
         file_name = fullImgUrl[fullImgUrl.rfind("/")+1:]
-        target_path = thread_number_str+"/"+file_name
+        target_path = board_str+"/"+thread_number_str+"/"+file_name
         process = Process(target=downloadAndSaveMediaFile,
                           args=(fullImgUrl, target_path))
         process.start()
@@ -99,9 +103,14 @@ def downloadAndSaveMediaFile(fullImgUrl, target_path):
         fout.write(response.data)
 
 
-def ensure_dir(directory):
-    if not os.path.exists(directory):
-        os.makedirs(directory)
+def ensure_dir(pathStr):
+    print("Checking if we have to create " + str(pathStr))
+    file_path = Path(pathStr)
+    if not os.path.exists(file_path):
+        print("Yes. Creating " + str(file_path))
+        os.makedirs(file_path)
+    else:
+        print("No. ")
 
 
 if __name__ == "__main__":
