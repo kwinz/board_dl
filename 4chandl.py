@@ -55,6 +55,14 @@ def main():
 
     # print(str(response.data))
 
+    if response.status == 404:
+        print("Thread timed out. Quitting.")
+        exit(0)
+
+    if response.status != 200:
+        print("Unknown status code: "+str(response.status))
+        exit(2)
+
     begin_match_time = timer()
     media_reg_pattern = re.compile(imgReg)
     matches = media_reg_pattern.findall(str(response.data))
@@ -92,8 +100,7 @@ def downloadAndSaveMediaFile(fullImgUrl, target_path):
         print("already downloaded "+target_path+" SKIPPING")
         return
 
-    print("Downloading: "+fullImgUrl)
-    print("Path: " + target_path)
+    print("Downloading: "+fullImgUrl + "\nPath: " + target_path)
 
     http_pool = urllib3.PoolManager(
         cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
