@@ -11,7 +11,7 @@ from pathlib import Path
 
 
 userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36'
-imgReg = r"\/\/is[1-3]\.4chan\.org\/[a-z]{1,6}\/[a-z|0-9]+\.(?:gif|jpg|webm)"
+imgReg = r"\/\/(?:i\.4cdn|is[1-3]\.4chan)\.org\/[a-z]{1,6}\/[a-z|0-9]+[^s]\.(?:gif|jpg|webm)"
 myheaders = {'User-Agent': userAgent}
 
 
@@ -54,6 +54,7 @@ def main():
           str(end_download_time - begin_download_time)+" s")
 
     # print(str(response.data))
+    # exit(0)
 
     if response.status == 404:
         print("Thread timed out. Quitting.")
