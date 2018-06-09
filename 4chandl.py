@@ -86,10 +86,6 @@ def main():
             print("Unknown status code: "+str(response.status))
             exit(2)
 
-        if args.save_html:
-            with open(os.path.join(board_str, thread_number_str, "thread.html"), 'wb') as fout:
-                fout.write(response.data)
-
         begin_match_time = timer()
         media_reg_pattern = re.compile(imgReg)
 
@@ -108,6 +104,10 @@ def main():
             ensure_dir(os.path.join(board_str, thread_number_str, "symlinks"))
         else:
             ensure_dir(os.path.join(board_str, thread_number_str))
+
+        if args.save_html:
+            with open(os.path.join(board_str, thread_number_str, "thread.html"), 'wb') as fout:
+                fout.write(response.data)
 
         processes = []
         begin_download_media_time = timer()
