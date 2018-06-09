@@ -31,13 +31,13 @@ def main():
     parser.add_argument(
         "--force-download", help="Downloads the media files again overwriting existing files", action="store_true")
     parser.add_argument(
-        "--after-action", type=str, help="Can be OPEN_EXPLORER")
+        "--after-action", type=str, help="Can be SHOW_FILES")
     parser.add_argument(
         "--until-404", help="Keeps downloading all new media until the thread dies or --retry-max is reached", action="store_true")
     parser.add_argument(
-        "--retry-delay", type=int, default=120, help="Delay in seconds in between download rounds. Combine with --until-404")
+        "--retry-delay", type=int, default=120, help="Delay in seconds in between download rounds. Combine with --until-404. Default=120")
     parser.add_argument(
-        "--retries-max", type=int, default=30, help="Max retries before we give up, even if thread is not 404 yet. 0 = no limit")
+        "--retries-max", type=int, default=30, help="Max retries before we give up, even if thread is not 404 yet. 0 = no limit. Combine with --until-404. Default=30")
 
     args = parser.parse_args()
 
@@ -147,7 +147,7 @@ def main():
         else:
             break
 
-    if args.after_action == "OPEN_EXPLORER":
+    if args.after_action == "SHOW_FILES":
         directory = os.path.join(board_str, thread_number_str, " ")
         print("Opening in explorer: "+str(directory))
         subprocess.Popen(r'explorer "' + directory + '"')
