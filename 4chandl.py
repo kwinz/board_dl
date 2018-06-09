@@ -35,9 +35,9 @@ def main():
     parser.add_argument(
         "--until-404", help="Keeps downloading all new media until the thread dies or --retry-max is reached", action="store_true")
     parser.add_argument(
-        "--retry-delay", type=int, default=120, help="Delay in seconds in between download rounds. Combine with --until-404. Default=120")
+        "--retry-delay", type=check_positive, default=120, help="Delay in seconds in between download rounds. Combine with --until-404. Default=120")
     parser.add_argument(
-        "--retries-max", type=int, default=30, help="Max retries before we give up, even if thread is not 404 yet. 0 = no limit. Combine with --until-404. Default=30")
+        "--retries-max", type=check_natural, default=30, help="Max retries before we give up, even if thread is not 404 yet. 0 = no limit. Combine with --until-404. Default=30")
 
     args = parser.parse_args()
 
@@ -233,6 +233,22 @@ def printProgressBar(iteration, total, prefix='', suffix='', decimals=1, length=
     # Print New Line on Complete
     if iteration == total:
         print()
+
+
+def check_positive(value):
+    ivalue = int(value)
+    if ivalue <= 0:
+        raise argparse.ArgumentTypeError(
+            "%s is an invalid positive value" % value)
+    return ivalue
+
+
+def check_natural(value):
+    ivalue = int(value)
+    if ivalue < 0:
+        raise argparse.ArgumentTypeError(
+            "%s is an invalid natural (not negative integer value)" % value)
+    return ivalue
 
 
 if __name__ == "__main__":
