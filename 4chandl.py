@@ -35,7 +35,7 @@ def main():
     parser.add_argument(
         "--until-404", help="Keeps downloading all new media until the thread dies", action="store_true")
     parser.add_argument(
-        "--retry-delay", type=int, default=20, help="Delay in seconds in between download rounds. Combine with --until-404")
+        "--retry-delay", type=int, default=120, help="Delay in seconds in between download rounds. Combine with --until-404")
 
     args = parser.parse_args()
 
