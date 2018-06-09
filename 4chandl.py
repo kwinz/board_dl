@@ -81,7 +81,7 @@ def main():
     print("Parsing finished in "+str(end_match_time - begin_match_time)+" s")
     print("Found "+str(len(matches))+" media urls")
 
-    ensure_dir(board_str+"/"+thread_number_str)
+    ensure_dir(os.path.join(board_str, thread_number_str, "symlinks"))
 
     processes = []
     begin_download_media_time = timer()
@@ -111,8 +111,9 @@ def downloadAndSaveMediaFile(board_str, thread_number_str, match):
 
     fullImgUrl = "https:"+str(url_match)
     file_name = fullImgUrl[fullImgUrl.rfind("/")+1:]
-    target_path = board_str+"/"+thread_number_str+"/"+file_name
-    old_path = board_str+"/"+thread_number_str+"/"+name_match
+    target_path = os.path.join(board_str, thread_number_str, file_name)
+    name_path = os.path.join(
+        board_str, thread_number_str, "symlinks", name_match)
     #print("Old name: "+name_match)
     # return 0
 
@@ -130,7 +131,9 @@ def downloadAndSaveMediaFile(board_str, thread_number_str, match):
     with open(target_path, 'wb') as fout:
         fout.write(response.data)
 
-    os.symlink(file_name, old_path)
+    # symlinks have to reference the original file relative to itself,
+    # not relative to our current python working directory
+    os.symlink(os.path.join("..", file_name), name_path)
 
 
 def ensure_dir(pathStr):
