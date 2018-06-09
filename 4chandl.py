@@ -11,7 +11,10 @@ from pathlib import Path
 
 
 userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36'
-imgReg = r"(\/\/is[1-3]\.4chan\.org\/[a-z]{1,6}\/[a-z|0-9]+\.(?:gif|jpg|webm))\" target=\"_blank\">[^<](.*?)<\/a>"
+#imgReg = r"(\/\/is[1-3]\.4chan\.org\/[a-z]{1,6}\/[a-z|0-9]+\.(?:gif|jpg|webm))\" target=\"_blank\">([^<].*?)<\/a>"
+imgReg = r"<a (?:title=\"(.+?)\" )*href=\"(\/\/is[1-3]\.4chan\.org\/[a-z]{1,6}\/[a-z|0-9]+\.(?:gif|jpg|webm))\" target=\"_blank\">([^<].*?)<\/a>"
+# <a title="Gillian_Anderson_x_Samantha_Alexandra_04.webm" href="//is3.4chan.org/gif/1528018466350.webm" target="_blank" data-ytta-id="-">Gillian_Anderson_x_Samant(...).webm</a>
+
 myheaders = {'User-Agent': userAgent}
 
 
@@ -70,9 +73,9 @@ def main():
     matches = media_reg_pattern.findall(str(response.data))
     matches = list(set(matches))
 
-    for match in matches:
-        print(match)
-    exit(0)
+    # for match in matches:
+    #    print(match)
+    # exit(0)
 
     end_match_time = timer()
     print("Parsing finished in "+str(end_match_time - begin_match_time)+" s")
@@ -83,15 +86,8 @@ def main():
     processes = []
     begin_download_media_time = timer()
     for match in matches:
-        url_match = match[0]
-        oldName_match = match[1]
-
-        fullImgUrl = "https:"+str(url_match)
-        file_name = fullImgUrl[fullImgUrl.rfind("/")+1:]
-        target_path = board_str+"/"+thread_number_str+"/"+file_name
-        old_path = board_str+"/"+thread_number_str+"/"+oldName_match
         process = Process(target=downloadAndSaveMediaFile,
-                          args=(fullImgUrl, target_path, old_path))
+                          args=(board_str, thread_number_str, match))
         process.start()
         processes.append(process)
 
@@ -104,7 +100,21 @@ def main():
           str(end_download_media_time - begin_download_media_time)+" s")
 
 
-def downloadAndSaveMediaFile(fullImgUrl, target_path, old_path):
+def downloadAndSaveMediaFile(board_str, thread_number_str, match):
+
+    title_match = match[0]
+    url_match = match[1]
+    name_match = match[2]
+
+    if(len(title_match) > 0):
+        name_match = title_match
+
+    fullImgUrl = "https:"+str(url_match)
+    file_name = fullImgUrl[fullImgUrl.rfind("/")+1:]
+    target_path = board_str+"/"+thread_number_str+"/"+file_name
+    old_path = board_str+"/"+thread_number_str+"/"+name_match
+    #print("Old name: "+name_match)
+    # return 0
 
     my_file = Path(target_path)
     if my_file.is_file() and my_file.stat().st_size > 0:
@@ -120,7 +130,7 @@ def downloadAndSaveMediaFile(fullImgUrl, target_path, old_path):
     with open(target_path, 'wb') as fout:
         fout.write(response.data)
 
-    os.link(target_path, old_path)
+    os.symlink(file_name, old_path)
 
 
 def ensure_dir(pathStr):
