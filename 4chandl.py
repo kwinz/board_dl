@@ -38,6 +38,8 @@ def main():
         "--retry-delay", type=check_positive, default=120, help="Delay in seconds in between download rounds. Combine with --until-404. Default=120")
     parser.add_argument(
         "--retries-max", type=check_natural, default=30, help="Max retries before we give up, even if thread is not 404 yet. 0 = no limit. Combine with --until-404. Default=30")
+    parser.add_argument(
+        "--save-html", type=str2bool, default=True, help="Save html file (just the raw thread file, no dependencies). Default=True")
 
     args = parser.parse_args()
 
@@ -84,6 +86,10 @@ def main():
             print("Unknown status code: "+str(response.status))
             exit(2)
 
+        if args.save_html:
+            with open(os.path.join(board_str, thread_number_str, "thread.html"), 'wb') as fout:
+                fout.write(response.data)
+
         begin_match_time = timer()
         media_reg_pattern = re.compile(imgReg)
 
@@ -119,7 +125,8 @@ def main():
             processes.append(process)
 
         for process in processes:
-            process.join()
+            # wait for downloads to finish, but not longer than 30 minutes
+            process.join(60*30)
 
         end_download_media_time = timer()
 
@@ -249,6 +256,15 @@ def check_natural(value):
         raise argparse.ArgumentTypeError(
             "%s is an invalid natural (not negative integer value)" % value)
     return ivalue
+
+
+def str2bool(v):
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
 
 
 if __name__ == "__main__":
