@@ -24,6 +24,10 @@ def main():
         description='Downloads all media from a 4chan thread.')
     parser.add_argument('url', metavar='URL', type=str,
                         help='a link to the thread like https://boards.4chan.org/gif/thread/12891600/threadname')
+    parser.add_argument(
+        "--symlink-names", help="creates a subdirectory 'symlinks' linking the parsed original upload filenames with the numbered media files (requires Admin on Windows)", action="store_true")
+    parser.add_argument(
+        "--force-download", help="downloads the media files again overwriting existing files", action="store_true")
 
     args = parser.parse_args()
 
@@ -81,13 +85,16 @@ def main():
     print("Parsing finished in "+str(end_match_time - begin_match_time)+" s")
     print("Found "+str(len(matches))+" media urls")
 
-    ensure_dir(os.path.join(board_str, thread_number_str, "symlinks"))
+    if args.symlink_names:
+        ensure_dir(os.path.join(board_str, thread_number_str, "symlinks"))
+    else:
+        ensure_dir(os.path.join(board_str, thread_number_str))
 
     processes = []
     begin_download_media_time = timer()
     for match in matches:
         process = Process(target=downloadAndSaveMediaFile,
-                          args=(board_str, thread_number_str, match))
+                          args=(board_str, thread_number_str, match, args))
         process.start()
         processes.append(process)
 
@@ -100,7 +107,7 @@ def main():
           str(end_download_media_time - begin_download_media_time)+" s")
 
 
-def downloadAndSaveMediaFile(board_str, thread_number_str, match):
+def downloadAndSaveMediaFile(board_str, thread_number_str, match, args):
 
     title_match = match[0]
     url_match = match[1]
@@ -119,21 +126,30 @@ def downloadAndSaveMediaFile(board_str, thread_number_str, match):
 
     my_file = Path(target_path)
     if my_file.is_file() and my_file.stat().st_size > 0:
-        print("already downloaded "+target_path+" SKIPPING")
-        return
+        if args.force_download:
+            print("already downloaded "+target_path +
+                  " but force downloading")
+            download(fullImgUrl, target_path)
+        else:
+            print("already downloaded "+target_path+" SKIPPING")
+    else:
+        download(fullImgUrl, target_path)
 
+    if args.symlink_names:
+        if not os.path.exists(name_path):
+            # symlinks have to reference the original file relative to itself,
+            # not relative to our current python working directory
+            os.symlink(os.path.join("..", file_name), name_path)
+
+
+def download(fullImgUrl, target_path):
     print("Downloading: "+fullImgUrl + "\nPath: " + target_path)
-
     http_pool = urllib3.PoolManager(
         cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
     response = http_pool.request('GET', fullImgUrl, headers=myheaders)
 
     with open(target_path, 'wb') as fout:
         fout.write(response.data)
-
-    # symlinks have to reference the original file relative to itself,
-    # not relative to our current python working directory
-    os.symlink(os.path.join("..", file_name), name_path)
 
 
 def ensure_dir(pathStr):
