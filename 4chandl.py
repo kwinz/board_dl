@@ -9,7 +9,7 @@ from multiprocessing import Process, Queue
 import certifi
 from pathlib import Path
 import datetime
-
+import subprocess
 
 userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36'
 #imgReg = r"(\/\/is[1-3]\.4chan\.org\/[a-z]{1,6}\/[a-z|0-9]+\.(?:gif|jpg|webm))\" target=\"_blank\">([^<].*?)<\/a>"
@@ -29,6 +29,8 @@ def main():
         "--symlink-names", help="creates a subdirectory 'symlinks' linking the parsed original upload filenames with the numbered media files (requires Admin on Windows)", action="store_true")
     parser.add_argument(
         "--force-download", help="downloads the media files again overwriting existing files", action="store_true")
+    parser.add_argument(
+        "--after-action", type=str, help="Can be OPEN_EXPLORER")
 
     args = parser.parse_args()
 
@@ -113,6 +115,11 @@ def main():
 
     print("Downloaded all media in " +
           str(end_download_media_time - begin_download_media_time)+" s")
+
+    if args.after_action == "OPEN_EXPLORER":
+        directory = os.path.join(board_str, thread_number_str, " ")
+        print("Opening in explorer: "+str(directory))
+        subprocess.Popen(r'explorer "' + directory + '"')
 
 
 def downloadAndSaveMediaFile(board_str, thread_number_str, match, args):
