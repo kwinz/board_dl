@@ -10,6 +10,7 @@ import certifi
 from pathlib import Path
 import datetime
 import subprocess
+import time
 
 userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36'
 #imgReg = r"(\/\/is[1-3]\.4chan\.org\/[a-z]{1,6}\/[a-z|0-9]+\.(?:gif|jpg|webm))\" target=\"_blank\">([^<].*?)<\/a>"
@@ -24,13 +25,17 @@ def main():
     parser = argparse.ArgumentParser(
         description='Downloads all media from a 4chan thread.')
     parser.add_argument('url', metavar='URL', type=str,
-                        help='a link to the thread like https://boards.4chan.org/gif/thread/12891600/threadname')
+                        help='A link to the thread like https://boards.4chan.org/gif/thread/12891600/threadname')
     parser.add_argument(
-        "--symlink-names", help="creates a subdirectory 'symlinks' linking the parsed original upload filenames with the numbered media files (requires Admin on Windows)", action="store_true")
+        "--symlink-names", help="Creates a subdirectory 'symlinks' linking the parsed original upload filenames with the numbered media files (requires Admin on Windows)", action="store_true")
     parser.add_argument(
-        "--force-download", help="downloads the media files again overwriting existing files", action="store_true")
+        "--force-download", help="Downloads the media files again overwriting existing files", action="store_true")
     parser.add_argument(
         "--after-action", type=str, help="Can be OPEN_EXPLORER")
+    parser.add_argument(
+        "--until-404", help="Keeps downloading all new media until the thread dies", action="store_true")
+    parser.add_argument(
+        "--retry-delay", type=int, default=20, help="Delay in seconds in between download rounds. Combine with --until-404")
 
     args = parser.parse_args()
 
@@ -55,66 +60,73 @@ def main():
                             len("thread")+1:location_of_backslash_after_thread_number]
     print("Thread number: "+thread_number_str)
 
-    begin_download_time = timer()
-    http_pool = urllib3.PoolManager(
-        cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
-    response = http_pool.request('GET', url, headers=myheaders)
-    end_download_time = timer()
-    print("Downloaded '"+url+"' in " +
-          str(end_download_time - begin_download_time)+" s")
+    while True:
+        begin_download_time = timer()
+        http_pool = urllib3.PoolManager(
+            cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
+        response = http_pool.request('GET', url, headers=myheaders)
+        end_download_time = timer()
+        print("Downloaded '"+url+"' in " +
+              str(end_download_time - begin_download_time)+" s")
 
-    # print(str(response.data))
-    # exit(0)
+        # print(str(response.data))
+        # exit(0)
 
-    if response.status == 404:
-        print("Thread timed out. Quitting.")
-        exit(0)
+        if response.status == 404:
+            print("Thread timed out. Quitting.")
+            exit(0)
 
-    if response.status != 200:
-        print("Unknown status code: "+str(response.status))
-        exit(2)
+        if response.status != 200:
+            print("Unknown status code: "+str(response.status))
+            exit(2)
 
-    begin_match_time = timer()
-    media_reg_pattern = re.compile(imgReg)
+        begin_match_time = timer()
+        media_reg_pattern = re.compile(imgReg)
 
-    matches = media_reg_pattern.findall(str(response.data))
-    matches = list(set(matches))
+        matches = media_reg_pattern.findall(str(response.data))
+        matches = list(set(matches))
 
-    # for match in matches:
-    #    print(match)
-    # exit(0)
+        # for match in matches:
+        #    print(match)
+        # exit(0)
 
-    end_match_time = timer()
-    print("Parsing finished in "+str(end_match_time - begin_match_time)+" s")
-    print("Found "+str(len(matches))+" media urls")
+        end_match_time = timer()
+        print("Parsing finished in "+str(end_match_time - begin_match_time)+" s")
+        print("Found "+str(len(matches))+" media urls")
 
-    if args.symlink_names:
-        ensure_dir(os.path.join(board_str, thread_number_str, "symlinks"))
-    else:
-        ensure_dir(os.path.join(board_str, thread_number_str))
+        if args.symlink_names:
+            ensure_dir(os.path.join(board_str, thread_number_str, "symlinks"))
+        else:
+            ensure_dir(os.path.join(board_str, thread_number_str))
 
-    processes = []
-    begin_download_media_time = timer()
+        processes = []
+        begin_download_media_time = timer()
 
-    with open(os.path.join(board_str, thread_number_str, logFileName), 'w') as fout:
-        fout.write("Time: "+str(datetime.datetime.utcnow())+"\n")
-        fout.write(str(args.url)+"\n")
-        fout.write("Found "+str(len(matches))+" media urls\n")
-        fout.write("\n"+str(matches))
+        with open(os.path.join(board_str, thread_number_str, logFileName), 'w') as fout:
+            fout.write("Time: "+str(datetime.datetime.utcnow())+"\n")
+            fout.write(str(args.url)+"\n")
+            fout.write("Found "+str(len(matches))+" media urls\n")
+            fout.write("\n"+str(matches))
 
-    for match in matches:
-        process = Process(target=downloadAndSaveMediaFile,
-                          args=(board_str, thread_number_str, match, args))
-        process.start()
-        processes.append(process)
+        for match in matches:
+            process = Process(target=downloadAndSaveMediaFile,
+                              args=(board_str, thread_number_str, match, args))
+            process.start()
+            processes.append(process)
 
-    for process in processes:
-        process.join()
+        for process in processes:
+            process.join()
 
-    end_download_media_time = timer()
+        end_download_media_time = timer()
 
-    print("Downloaded all media in " +
-          str(end_download_media_time - begin_download_media_time)+" s")
+        print("Downloaded all media in " +
+              str(end_download_media_time - begin_download_media_time)+" s")
+
+        if args.until_404:
+            print("Retrying in "+str(args.retry_delay)+" s")
+            time.sleep(args.retry_delay)
+        else:
+            break
 
     if args.after_action == "OPEN_EXPLORER":
         directory = os.path.join(board_str, thread_number_str, " ")
