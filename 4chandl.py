@@ -124,7 +124,21 @@ def main():
 
         if args.until_404:
             print("Retrying in "+str(args.retry_delay)+" s")
-            time.sleep(args.retry_delay)
+
+            # A List of Items
+            items = list(range(0, args.retry_delay))
+            l = len(items)
+
+            # Initial call to print 0% progress
+            printProgressBar(0, l, prefix='Progress:',
+                             suffix='Complete', length=50)
+
+            for i, item in enumerate(items):
+                # Do stuff...
+                time.sleep(1)
+                # Update Progress Bar
+                printProgressBar(i+1, l, prefix='Progress:',
+                                 suffix='Complete', length=50)
         else:
             break
 
@@ -187,6 +201,33 @@ def ensure_dir(pathStr):
         os.makedirs(file_path)
     else:
         print("No. ")
+
+# Print iterations progress
+
+
+def printProgressBar(iteration, total, prefix='', suffix='', decimals=1, length=100, fill='█'):
+    """
+    Call in a loop to create terminal progress bar
+
+    @params:
+        iteration   - Required  : current iteration (Int)
+        total       - Required  : total iterations (Int)
+        prefix      - Optional  : prefix string (Str)
+        suffix      - Optional  : suffix string (Str)
+        decimals    - Optional  : positive number of decimals in percent complete (Int)
+        length      - Optional  : character length of bar (Int)
+        fill        - Optional  : bar fill character (Str)
+    @authors:
+        https://stackoverflow.com/a/34325723/643011
+    """
+    percent = ("{0:." + str(decimals) + "f}").format(100 *
+                                                     (iteration / float(total)))
+    filledLength = int(length * iteration // total)
+    bar = fill * filledLength + '-' * (length - filledLength)
+    print('\r%s |%s| %s%% %s' % (prefix, bar, percent, suffix), end='\r')
+    # Print New Line on Complete
+    if iteration == total:
+        print()
 
 
 if __name__ == "__main__":
