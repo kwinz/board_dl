@@ -33,9 +33,11 @@ def main():
     parser.add_argument(
         "--after-action", type=str, help="Can be OPEN_EXPLORER")
     parser.add_argument(
-        "--until-404", help="Keeps downloading all new media until the thread dies", action="store_true")
+        "--until-404", help="Keeps downloading all new media until the thread dies or --retry-max is reached", action="store_true")
     parser.add_argument(
         "--retry-delay", type=int, default=120, help="Delay in seconds in between download rounds. Combine with --until-404")
+    parser.add_argument(
+        "--retries-max", type=int, default=30, help="Max retries before we give up, even if thread is not 404 yet. 0 = no limit")
 
     args = parser.parse_args()
 
@@ -59,6 +61,8 @@ def main():
     thread_number_str = url[location_of_thread_substring_in_url +
                             len("thread")+1:location_of_backslash_after_thread_number]
     print("Thread number: "+thread_number_str)
+
+    retries = 0
 
     while True:
         begin_download_time = timer()
@@ -122,7 +126,7 @@ def main():
         print("Downloaded all media in " +
               str(end_download_media_time - begin_download_media_time)+" s")
 
-        if args.until_404:
+        if args.until_404 and (args.retries_max == 0 or retries < args.retries_max):
             print("Retrying in "+str(args.retry_delay)+" s")
 
             # A List of Items
@@ -133,12 +137,13 @@ def main():
             printProgressBar(0, l, prefix='Progress:',
                              suffix='Complete', length=50)
 
-            for i, item in enumerate(items):
+            for i, _ in enumerate(items):
                 # Do stuff...
                 time.sleep(1)
                 # Update Progress Bar
                 printProgressBar(i+1, l, prefix='Progress:',
                                  suffix='Complete', length=50)
+            retries += 1
         else:
             break
 
