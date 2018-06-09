@@ -11,7 +11,7 @@ from pathlib import Path
 
 
 userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36'
-imgReg = r"\/\/(?:i\.4cdn|is[1-3]\.4chan)\.org\/[a-z]{1,6}\/[a-z|0-9]+[^s]\.(?:gif|jpg|webm)"
+imgReg = r"(\/\/is[1-3]\.4chan\.org\/[a-z]{1,6}\/[a-z|0-9]+\.(?:gif|jpg|webm))\" target=\"_blank\">[^<](.*?)<\/a>"
 myheaders = {'User-Agent': userAgent}
 
 
@@ -66,8 +66,14 @@ def main():
 
     begin_match_time = timer()
     media_reg_pattern = re.compile(imgReg)
+
     matches = media_reg_pattern.findall(str(response.data))
     matches = list(set(matches))
+
+    for match in matches:
+        print(match)
+    exit(0)
+
     end_match_time = timer()
     print("Parsing finished in "+str(end_match_time - begin_match_time)+" s")
     print("Found "+str(len(matches))+" media urls")
@@ -77,11 +83,15 @@ def main():
     processes = []
     begin_download_media_time = timer()
     for match in matches:
-        fullImgUrl = "https:"+str(match)
+        url_match = match[0]
+        oldName_match = match[1]
+
+        fullImgUrl = "https:"+str(url_match)
         file_name = fullImgUrl[fullImgUrl.rfind("/")+1:]
         target_path = board_str+"/"+thread_number_str+"/"+file_name
+        old_path = board_str+"/"+thread_number_str+"/"+oldName_match
         process = Process(target=downloadAndSaveMediaFile,
-                          args=(fullImgUrl, target_path))
+                          args=(fullImgUrl, target_path, old_path))
         process.start()
         processes.append(process)
 
@@ -94,7 +104,7 @@ def main():
           str(end_download_media_time - begin_download_media_time)+" s")
 
 
-def downloadAndSaveMediaFile(fullImgUrl, target_path):
+def downloadAndSaveMediaFile(fullImgUrl, target_path, old_path):
 
     my_file = Path(target_path)
     if my_file.is_file() and my_file.stat().st_size > 0:
@@ -109,6 +119,8 @@ def downloadAndSaveMediaFile(fullImgUrl, target_path):
 
     with open(target_path, 'wb') as fout:
         fout.write(response.data)
+
+    os.link(target_path, old_path)
 
 
 def ensure_dir(pathStr):
