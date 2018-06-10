@@ -11,6 +11,7 @@ from pathlib import Path
 import datetime
 import subprocess
 import time
+from html.parser import HTMLParser
 
 userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36'
 #imgReg = r"(\/\/is[1-3]\.4chan\.org\/[a-z]{1,6}\/[a-z|0-9]+\.(?:gif|jpg|webm))\" target=\"_blank\">([^<].*?)<\/a>"
@@ -75,7 +76,7 @@ def main():
         print("Downloaded '"+url+"' in " +
               str(end_download_time - begin_download_time)+" s")
 
-        # print(str(response.data))
+        # print(str(response.data.decode('utf-8')))
         # exit(0)
 
         if response.status == 404:
@@ -89,7 +90,7 @@ def main():
         begin_match_time = timer()
         media_reg_pattern = re.compile(imgReg)
 
-        matches = media_reg_pattern.findall(str(response.data))
+        matches = media_reg_pattern.findall(str(response.data.decode('utf-8')))
         matches = list(set(matches))
 
         # for match in matches:
@@ -166,8 +167,17 @@ def downloadAndSaveMediaFile(board_str, thread_number_str, match, args):
     url_match = match[1]
     name_match = match[2]
 
+    h = HTMLParser()
+    title_match = h.unescape(title_match)
+    name_match = h.unescape(name_match)
+
     if(len(title_match) > 0):
         name_match = title_match
+
+    print("before sanitizing" + str(name_match))
+    # remove bad NTFS filename characters
+    name_match = re.sub('[\/\\*?:"<>]', '_', name_match)
+    print("after sanitizing" + str(name_match))
 
     fullImgUrl = "https:"+str(url_match)
     file_name = fullImgUrl[fullImgUrl.rfind("/")+1:]
@@ -192,6 +202,7 @@ def downloadAndSaveMediaFile(board_str, thread_number_str, match, args):
         if not os.path.exists(name_path):
             # symlinks have to reference the original file relative to itself,
             # not relative to our current python working directory
+            print("Creating link" + str(name_path))
             os.symlink(os.path.join("..", file_name), name_path)
 
 
