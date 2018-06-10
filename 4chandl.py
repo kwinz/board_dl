@@ -80,7 +80,7 @@ def main():
 
         if response.status == 404:
             print("Thread timed out. Quitting.")
-            exit(0)
+            break
 
         if response.status != 200:
             print("Unknown status code: "+str(response.status))
