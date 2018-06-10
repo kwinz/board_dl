@@ -174,10 +174,8 @@ def downloadAndSaveMediaFile(board_str, thread_number_str, match, args):
     if(len(title_match) > 0):
         name_match = title_match
 
-    print("before sanitizing" + str(name_match))
     # remove bad NTFS filename characters
-    name_match = re.sub('[\/\\*?:"<>]', '_', name_match)
-    print("after sanitizing" + str(name_match))
+    name_match = re.sub(r'[\/\\*?:"<>]', '_', name_match)
 
     fullImgUrl = "https:"+str(url_match)
     file_name = fullImgUrl[fullImgUrl.rfind("/")+1:]
@@ -202,7 +200,7 @@ def downloadAndSaveMediaFile(board_str, thread_number_str, match, args):
         if not os.path.exists(name_path):
             # symlinks have to reference the original file relative to itself,
             # not relative to our current python working directory
-            print("Creating link" + str(name_path))
+            print("Creating link: " + str(name_path))
             os.symlink(os.path.join("..", file_name), name_path)
 
 
