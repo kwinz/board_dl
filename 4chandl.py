@@ -1,3 +1,7 @@
+#!python
+# PYTHON_ARGCOMPLETE_OK
+
+
 import urllib3
 import sys
 import os
@@ -13,6 +17,7 @@ import subprocess
 import time
 from html.parser import HTMLParser
 from tkinter import Tk
+import codecs
 
 userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36'
 # imgReg = r"(\/\/is[1-3]\.4chan\.org\/[a-z]{1,6}\/[a-z|0-9]+\.(?:gif|jpg|webm))\" target=\"_blank\">([^<].*?)<\/a>"
@@ -120,7 +125,10 @@ def main():
         processes = []
         begin_download_media_time = timer()
 
-        with open(os.path.join(board_str, thread_number_str, logFileName), 'w') as fout:
+        # https://stackoverflow.com/a/934173/643011
+        # At this point matches contains unescaped unicode chars. Open file as utf-8 and write BOM to avoid following error:
+        # UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f3a7' in position 362: character maps to < undefined >
+        with codecs.open(os.path.join(board_str, thread_number_str, logFileName), 'w', 'utf-8-sig') as fout:
             fout.write("Time: "+str(datetime.datetime.utcnow())+"\n")
             fout.write(str(args.url)+"\n")
             fout.write("Found "+str(len(matches))+" media urls\n")
