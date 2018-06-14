@@ -1,6 +1,11 @@
 #!python
+# -*- coding: utf8 -*-
 # PYTHON_ARGCOMPLETE_OK
 
+
+import sys
+assert sys.version_info >= (
+    3, 6), "Needs to be executed with python 3.6 or later"
 
 import urllib3
 import sys
@@ -260,7 +265,7 @@ def printProgressBar(iteration, total, prefix='', suffix='', decimals=1, length=
                                                      (iteration / float(total)))
     filledLength = int(length * iteration // total)
     bar = fill * filledLength + '-' * (length - filledLength)
-    print('\r%s |%s| %s%% %s' % (prefix, bar, percent, suffix), end='\r')
+    eval(r"print('\r%s |%s| %s%% %s' % (prefix, bar, percent, suffix), end='\r')")
     # Print New Line on Complete
     if iteration == total:
         print()
