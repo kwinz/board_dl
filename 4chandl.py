@@ -224,7 +224,7 @@ def downloadAndSaveMediaFile(board_str, thread_number_str, match, args):
             os.symlink(os.path.join("..", file_name), name_path)
 
 
-def download(fullImgUrl, target_path):
+def download(fullImgUrl, target_path: str):
     print("Downloading: "+fullImgUrl + "\nPath: " + target_path)
     http_pool = urllib3.PoolManager(
         cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
