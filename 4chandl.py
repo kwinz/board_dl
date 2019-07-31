@@ -21,7 +21,7 @@ import datetime
 import subprocess
 import time
 from html.parser import HTMLParser
-from tkinter import Tk
+from tkinter import Tk, TclError
 import codecs
 
 userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36'
@@ -60,9 +60,13 @@ def main():
     if(args.url):
         url = args.url
     else:
-        url = Tk().clipboard_get()
-        print("No url parameter (see --help). Trying url from clipboard")
-        print("Got: "+url)
+        url = ""
+        try:
+            print("No url parameter (see --help). Trying url from clipboard")
+            print("Got: "+url)
+            url = Tk().clipboard_get()
+        except TclError:
+            print("No url parameter passed and failed to get clipboard, are you running without GUI?")
 
     location_of_org_substring_in_url = url.find("org")
     location_of_thread_substring_in_url = url.find("thread")
