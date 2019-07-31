@@ -26,7 +26,7 @@ import codecs
 
 userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36'
 # imgReg = r"(\/\/is[1-3]\.4chan\.org\/[a-z]{1,6}\/[a-z|0-9]+\.(?:gif|jpg|webm))\" target=\"_blank\">([^<].*?)<\/a>"
-imgReg = r"<a (?:title=\"([^\"]*?)\" )*href=\"(\/\/i\.4cdn\.org\/[a-z]{1,6}\/[a-z|0-9]+\.(?:gif|jpg|webm|png))\" target=\"_blank\">([^<][^\"]*?)<\/a>"
+imgReg = r"<a (?:title=\"([^\"]*?)\" )*href=\"(\/\/(s|is[1-3])\.(4cdn\.org|4chan.org)\/[a-z]{1,6}\/[a-z|0-9]+\.(?:gif|jpg|webm|png))\" target=\"_blank\">([^<][^\"]*?)<\/a>"
 # <a title="Gillian_Anderson_x_Samantha_Alexandra_04.webm" href="//is3.4chan.org/gif/1528018466350.webm" target="_blank" data-ytta-id="-">Gillian_Anderson_x_Samant(...).webm</a>
 myheaders = {'User-Agent': userAgent}
 logFileName = 'board_dl.log'
@@ -66,7 +66,8 @@ def main():
             print("Got: "+url)
             url = Tk().clipboard_get()
         except TclError:
-            print("No url parameter passed and failed to get clipboard, are you running without GUI?")
+            print(
+                "No url parameter passed and failed to get clipboard, are you running without GUI?")
 
     location_of_org_substring_in_url = url.find("org")
     location_of_thread_substring_in_url = url.find("thread")
