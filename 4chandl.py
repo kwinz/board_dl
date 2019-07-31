@@ -63,8 +63,8 @@ def main():
         url = ""
         try:
             print("No url parameter (see --help). Trying url from clipboard")
-            print("Got: "+url)
             url = Tk().clipboard_get()
+            print("Got: "+url)
         except TclError:
             print(
                 "No url parameter passed and failed to get clipboard, are you running without GUI?")
