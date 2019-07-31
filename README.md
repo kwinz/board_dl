@@ -1,6 +1,14 @@
 # board_dl
 
-Downloads images/videos from 4chan using Python3.6 or newer.
+Downloads images/videos from 4chan using Python3.6 or newer.  
+* Supports original filenames.  
+* Supports Unicode names.  
+* Fast parallel download.  
+* If no URL is passed as argument takes the URL from the clipboard.  
+* Can download until 404.  
+* Supports showing files when download finishes.  
+* Supports HTTP and HTTPS links.  
+* Tested with Windows 10 and Linux Ubuntu 18.04.  
 
 # Usage
 
