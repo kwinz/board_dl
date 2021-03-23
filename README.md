@@ -52,6 +52,9 @@ optional arguments:
 
 You need python3 and python3-tk (e.g. `sudo apt-get install python3.7 python3-tk`)
 
+On newer Windows 10 installs it is sufficient to install Python 3.9 from the Windows store and then packages `urllib3` and `certifi` with
+`pip install -r requirements.txt`
+
 # Debugging
 
 Saves a `thread.html`, check with https://regex101.com/ if the `imgReg` regex in `4chandl.py` is broken due to board changes.
