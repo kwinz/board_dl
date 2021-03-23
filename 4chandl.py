@@ -20,7 +20,7 @@ from pathlib import Path
 import datetime
 import subprocess
 import time
-from html.parser import HTMLParser
+import html
 from tkinter import Tk, TclError
 import codecs
 
@@ -192,9 +192,8 @@ def downloadAndSaveMediaFile(board_str, thread_number_str, match, args):
     url_match = match[1]
     name_match = match[2]
 
-    h = HTMLParser()
-    title_match = h.unescape(title_match)
-    name_match = h.unescape(name_match)
+    title_match = html.unescape(title_match)
+    name_match = html.unescape(name_match)
 
     if(len(title_match) > 0):
         name_match = title_match
