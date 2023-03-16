@@ -89,10 +89,11 @@ def main():
 
     retries = 0
 
+    http_pool = urllib3.PoolManager(
+            cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
+
     while True:
         begin_download_time = timer()
-        http_pool = urllib3.PoolManager(
-            cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
         response = http_pool.request('GET', url, headers=myheaders)
         end_download_time = timer()
         print("Downloaded '"+url+"' in " +
