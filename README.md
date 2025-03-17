@@ -19,7 +19,7 @@ python3 ./4chandl.py --help
 usage: 4chandl.py [-h] [--symlink-names] [--force-download]
                   [--after-action AFTER_ACTION] [--until-404]
                   [--retry-delay RETRY_DELAY] [--retries-max RETRIES_MAX]
-                  [--save-html SAVE_HTML]
+                  [--save-html SAVE_HTML] [--method METHOD] 
                   [URL]
  
 Downloads all media from a 4chan thread.
@@ -47,7 +47,8 @@ optional arguments:
                         Default=30
   --save-html SAVE_HTML
                         Save html file (just the raw thread file, no
-                        dependencies). Default=True
+                        dependencies). Default=True (FIXME)
+  --method METHOD       Method can either be 'api' or 'crawl'. Default=api
 ```
 
 # Install

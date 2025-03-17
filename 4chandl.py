@@ -55,7 +55,7 @@ def main():
     parser.add_argument(
         "--save-html", type=str2bool, default=True, help="Save html file (just the raw thread file, no dependencies). Default=True")
     parser.add_argument(
-        "--method", type=str, default="api", help="Method can either be 'api' or 'crawl'")
+        "--method", type=str, default="api", help="Method can either be 'api' or 'crawl'. Default=api")
 
     args = parser.parse_args()
 
