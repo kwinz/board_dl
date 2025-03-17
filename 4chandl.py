@@ -286,6 +286,12 @@ def download(fullImgUrl, target_path: str):
         cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
     response = http_pool.request('GET', fullImgUrl, headers=myheaders)
 
+    if response.status != 200:
+        # we now sometimes get response.status 429
+        # with response.data "Too Many Requests"
+        print("Unknown status code: "+str(response.status))
+        exit(2)
+
     with open(target_path, 'wb') as fout:
         fout.write(response.data)
 
