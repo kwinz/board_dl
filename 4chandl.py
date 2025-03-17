@@ -1,4 +1,4 @@
-#!python
+#!/usr/bin/python
 # -*- coding: utf8 -*-
 # PYTHON_ARGCOMPLETE_OK
 
@@ -24,7 +24,7 @@ import html
 from tkinter import Tk, TclError
 import codecs
 
-userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36'
+userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36'
 # imgReg = r"(\/\/is[1-3]\.4chan\.org\/[a-z]{1,6}\/[a-z|0-9]+\.(?:gif|jpg|webm))\" target=\"_blank\">([^<].*?)<\/a>"
 imgReg = r"<a (?:title=\"([^\"]*?)\" )*href=\"(\/\/(?:s|is[1-3]|i)\.(?:4cdn\.org|4chan\.org)\/[a-z]{1,6}\/[a-z|0-9]+\.(?:gif|jpg|webm|png))\" target=\"_blank\">([^<][^\"]*?)<\/a>"
 # <a title="Gillian_Anderson_x_Samantha_Alexandra_04.webm" href="//is3.4chan.org/gif/1528018466350.webm" target="_blank" data-ytta-id="-">Gillian_Anderson_x_Samant(...).webm</a>
@@ -92,6 +92,8 @@ def main():
     http_pool = urllib3.PoolManager(
             cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
 
+    media_reg_pattern = re.compile(imgReg)
+
     while True:
         begin_download_time = timer()
         response = http_pool.request('GET', url, headers=myheaders)
@@ -111,8 +113,7 @@ def main():
             exit(2)
 
         begin_match_time = timer()
-        media_reg_pattern = re.compile(imgReg)
-
+        
         matches = media_reg_pattern.findall(str(response.data.decode('utf-8')))
         matches = list(set(matches))
 
