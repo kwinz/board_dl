@@ -8,7 +8,9 @@ Downloads images/videos from 4chan using Python3.6 or newer.
 * Can download until 404.  
 * Supports showing files when download finishes.  
 * Supports HTTP and HTTPS links.  
-* Tested with Windows 10 and Linux Ubuntu 18.04.  
+* Tested with Windows 10 and Linux Ubuntu 18.04.
+* Can use official API to workaround error 403 "Forbidden" when scraping
+* Automatic retry on rate limit (error 429 "Too many requests")
 
 # Usage
 
