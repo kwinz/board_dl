@@ -23,6 +23,8 @@ import time
 import html
 from tkinter import Tk, TclError
 import codecs
+import json
+from time import sleep
 
 userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36'
 # imgReg = r"(\/\/is[1-3]\.4chan\.org\/[a-z]{1,6}\/[a-z|0-9]+\.(?:gif|jpg|webm))\" target=\"_blank\">([^<].*?)<\/a>"
@@ -30,7 +32,7 @@ imgReg = r"<a (?:title=\"([^\"]*?)\" )*href=\"(\/\/(?:s|is[1-3]|i)\.(?:4cdn\.org
 # <a title="Gillian_Anderson_x_Samantha_Alexandra_04.webm" href="//is3.4chan.org/gif/1528018466350.webm" target="_blank" data-ytta-id="-">Gillian_Anderson_x_Samant(...).webm</a>
 myheaders = {'User-Agent': userAgent}
 logFileName = 'board_dl.log'
-
+parallelDownloads = False
 
 def main():
 
@@ -52,12 +54,14 @@ def main():
         "--retries-max", type=check_natural, default=30, help="Max retries before we give up, even if thread is not 404 yet. 0 = no limit. Combine with --until-404. Default=30")
     parser.add_argument(
         "--save-html", type=str2bool, default=True, help="Save html file (just the raw thread file, no dependencies). Default=True")
+    parser.add_argument(
+        "--method", type=str, default="api", help="Method can either be 'api' or 'crawl'")
 
     args = parser.parse_args()
 
     # url = 'https://boards.4chan.org/gif/thread/12891600/1010-bodies-and-face'
 
-    if(args.url):
+    if args.url:
         url = args.url
     else:
         url = ""
@@ -83,6 +87,7 @@ def main():
     location_of_backslash_after_thread_number = url.find(
         "/", location_of_thread_substring_in_url+len("thread")+1)
 
+    #fixme: if url is given without backslash the thread number is not correctly parsed
     thread_number_str = url[location_of_thread_substring_in_url +
                             len("thread")+1:location_of_backslash_after_thread_number]
     print("Thread number: "+thread_number_str)
@@ -92,30 +97,76 @@ def main():
     http_pool = urllib3.PoolManager(
             cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
 
+    if args.method == "api":
+        api = True
+    elif args.method == "crawl":
+        api = False
+    else:
+        print("Method can either be 'api' or 'crawl'")
+        exit(1)
+
     media_reg_pattern = re.compile(imgReg)
 
     while True:
         begin_download_time = timer()
-        response = http_pool.request('GET', url, headers=myheaders)
-        end_download_time = timer()
-        print("Downloaded '"+url+"' in " +
-              str(end_download_time - begin_download_time)+" s")
+        if api:
+            
+            api_threads_url = "https://a.4cdn.org/"+board_str+"/thread/"+thread_number_str+".json"
 
-        # print(str(response.data.decode('utf-8')))
-        # exit(0)
+            response = http_pool.request('GET', api_threads_url, headers=myheaders)
+            end_download_time = timer()
+            print("Downloaded '"+api_threads_url+"' in " +
+                str(end_download_time - begin_download_time)+" s")
 
-        if response.status == 404:
-            print("Thread timed out. Quitting.")
-            break
+            if response.status != 200:
+                print("Unknown status code: "+str(response.status))
+                exit(2)
 
-        if response.status != 200:
-            print("Unknown status code: "+str(response.status))
-            exit(2)
+            json_object = json.loads(response.data.decode('utf-8'));
 
-        begin_match_time = timer()
-        
-        matches = media_reg_pattern.findall(str(response.data.decode('utf-8')))
-        matches = list(set(matches))
+            print("Downloaded '"+str(json_object)+"'")
+
+            begin_match_time = timer()
+            matches=[]
+
+            for post in json_object["posts"]:
+                if 'filename' in post and 'ext' in post and 'tim' in post:
+                    image_original_name = post['filename'] + post['ext'];
+                    image_url = "//i.4cdn.org/"+board_str+"/"+str(post['tim']) + post['ext'];
+
+                    #print("name: "+ image_original_name)
+                    #print("file url: "+ image_url)
+
+                    match=[]
+                    match.append("")
+                    match.append(image_url)
+                    match.append(image_original_name)
+                    matches.append(match)
+
+            end_match_time = timer()
+            print("Parsing finished in "+str(end_match_time - begin_match_time)+" s")
+            print("Found "+str(len(matches))+" media urls")
+        else:
+            response = http_pool.request('GET', url, headers=myheaders)
+            end_download_time = timer()
+            print("Downloaded '"+url+"' in " +
+                str(end_download_time - begin_download_time)+" s")
+
+            # print(str(response.data.decode('utf-8')))
+            # exit(0)
+
+            if response.status == 404:
+                print("Thread timed out. Quitting.")
+                break
+
+            if response.status != 200:
+                print("Unknown status code: "+str(response.status))
+                exit(2)
+
+            begin_match_time = timer()
+            
+            matches = media_reg_pattern.findall(str(response.data.decode('utf-8')))
+            matches = list(set(matches))
 
         # for match in matches:
         #    print(match)
@@ -146,20 +197,28 @@ def main():
             fout.write("Found "+str(len(matches))+" media urls\n")
             fout.write("\n"+str(matches))
 
-        for match in matches:
-            process = Process(target=downloadAndSaveMediaFile,
-                              args=(board_str, thread_number_str, match, args))
-            process.start()
-            processes.append(process)
+        if parallelDownloads:
+            for match in matches:
+                process = Process(target=downloadAndSaveMediaFile,
+                                args=(board_str, thread_number_str, match, args))
+                process.start()
+                processes.append(process)
 
-        for process in processes:
-            # wait for downloads to finish, but not longer than 30 minutes
-            process.join(60*30)
+            for process in processes:
+                # wait for downloads to finish, but not longer than 30 minutes
+                process.join(60*30)
+                if process.exitcode:
+                    print("Error downloading media")
+                    exit(2)
+        else:
+            for match in matches:
+                downloadAndSaveMediaFile(board_str, thread_number_str, match, args)
+       
 
         end_download_media_time = timer()
 
         print("Downloaded all media in " +
-              str(end_download_media_time - begin_download_media_time)+" s")
+            str(end_download_media_time - begin_download_media_time)+" s")
 
         if args.until_404 and (args.retries_max == 0 or retries < args.retries_max):
             print("Retrying in "+str(args.retry_delay)+" s")
@@ -170,14 +229,14 @@ def main():
 
             # Initial call to print 0% progress
             printProgressBar(0, l, prefix='Progress:',
-                             suffix='Complete', length=50)
+                            suffix='Complete', length=50)
 
             for i, _ in enumerate(items):
                 # Do stuff...
                 time.sleep(1)
                 # Update Progress Bar
                 printProgressBar(i+1, l, prefix='Progress:',
-                                 suffix='Complete', length=50)
+                                suffix='Complete', length=50)
             retries += 1
         else:
             break
@@ -231,10 +290,22 @@ def downloadAndSaveMediaFile(board_str, thread_number_str, match, args):
 
 
 def download(fullImgUrl, target_path: str):
-    print("Downloading: "+fullImgUrl + "\nPath: " + target_path)
-    http_pool = urllib3.PoolManager(
-        cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
-    response = http_pool.request('GET', fullImgUrl, headers=myheaders)
+    while True:
+        print("Downloading: "+fullImgUrl + "\nPath: " + target_path)
+        http_pool = urllib3.PoolManager(
+            cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
+        response = http_pool.request('GET', fullImgUrl, headers=myheaders)
+        if response.status == 429:
+            print("Too many requests. Waiting 6 seconds and trying again")
+            sleep(6)
+        else:
+            break
+
+    if response.status != 200:
+        # we now sometimes get response.status 429
+        # with response.data "Too Many Requests"
+        print("Unknown status code: "+str(response.status))
+        exit(2)
 
     with open(target_path, 'wb') as fout:
         fout.write(response.data)
