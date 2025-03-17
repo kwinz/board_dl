@@ -124,7 +124,26 @@ def main():
 
             print("Downloaded '"+str(json_object)+"'")
 
-            break
+            begin_match_time = timer()
+            matches=[]
+
+            for post in json_object["posts"]:
+                if 'filename' in post and 'ext' in post and 'tim' in post:
+                    image_original_name = post['filename'] + post['ext'];
+                    image_url = "//i.4cdn.org/"+board_str+"/"+str(post['tim']) + post['ext'];
+
+                    print("filename: "+ image_original_name)
+                    print("filename: "+ image_url)
+
+                    match=[]
+                    match.append("title?")
+                    match.append(image_url)
+                    match.append(image_original_name)
+                    matches.append(match)
+
+            end_match_time = timer()
+            print("Parsing finished in "+str(end_match_time - begin_match_time)+" s")
+            print("Found "+str(len(matches))+" media urls")
         else:
 
             response = http_pool.request('GET', url, headers=myheaders)
@@ -148,70 +167,70 @@ def main():
             matches = media_reg_pattern.findall(str(response.data.decode('utf-8')))
             matches = list(set(matches))
 
-            # for match in matches:
-            #    print(match)
-            # exit(0)
+        # for match in matches:
+        #    print(match)
+        # exit(0)
 
-            end_match_time = timer()
-            print("Parsing finished in "+str(end_match_time - begin_match_time)+" s")
-            print("Found "+str(len(matches))+" media urls")
+        end_match_time = timer()
+        print("Parsing finished in "+str(end_match_time - begin_match_time)+" s")
+        print("Found "+str(len(matches))+" media urls")
 
-            if args.symlink_names:
-                ensure_dir(os.path.join(board_str, thread_number_str, "symlinks"))
-            else:
-                ensure_dir(os.path.join(board_str, thread_number_str))
+        if args.symlink_names:
+            ensure_dir(os.path.join(board_str, thread_number_str, "symlinks"))
+        else:
+            ensure_dir(os.path.join(board_str, thread_number_str))
 
-            if args.save_html:
-                with open(os.path.join(board_str, thread_number_str, "thread.html"), 'wb') as fout:
-                    fout.write(response.data)
+        if args.save_html:
+            with open(os.path.join(board_str, thread_number_str, "thread.html"), 'wb') as fout:
+                fout.write(response.data)
 
-            processes = []
-            begin_download_media_time = timer()
+        processes = []
+        begin_download_media_time = timer()
 
-            # https://stackoverflow.com/a/934173/643011
-            # At this point matches contains unescaped unicode chars. Open file as utf-8 and write BOM to avoid following error:
-            # UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f3a7' in position 362: character maps to < undefined >
-            with codecs.open(os.path.join(board_str, thread_number_str, logFileName), 'w', 'utf-8-sig') as fout:
-                fout.write("Time: "+str(datetime.datetime.utcnow())+"\n")
-                fout.write(str(args.url)+"\n")
-                fout.write("Found "+str(len(matches))+" media urls\n")
-                fout.write("\n"+str(matches))
+        # https://stackoverflow.com/a/934173/643011
+        # At this point matches contains unescaped unicode chars. Open file as utf-8 and write BOM to avoid following error:
+        # UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f3a7' in position 362: character maps to < undefined >
+        with codecs.open(os.path.join(board_str, thread_number_str, logFileName), 'w', 'utf-8-sig') as fout:
+            fout.write("Time: "+str(datetime.datetime.utcnow())+"\n")
+            fout.write(str(args.url)+"\n")
+            fout.write("Found "+str(len(matches))+" media urls\n")
+            fout.write("\n"+str(matches))
 
-            for match in matches:
-                process = Process(target=downloadAndSaveMediaFile,
-                                args=(board_str, thread_number_str, match, args))
-                process.start()
-                processes.append(process)
+        for match in matches:
+            process = Process(target=downloadAndSaveMediaFile,
+                            args=(board_str, thread_number_str, match, args))
+            process.start()
+            processes.append(process)
 
-            for process in processes:
-                # wait for downloads to finish, but not longer than 30 minutes
-                process.join(60*30)
+        for process in processes:
+            # wait for downloads to finish, but not longer than 30 minutes
+            process.join(60*30)
 
-            end_download_media_time = timer()
+        end_download_media_time = timer()
 
-            print("Downloaded all media in " +
-                str(end_download_media_time - begin_download_media_time)+" s")
+        print("Downloaded all media in " +
+            str(end_download_media_time - begin_download_media_time)+" s")
 
-            if args.until_404 and (args.retries_max == 0 or retries < args.retries_max):
-                print("Retrying in "+str(args.retry_delay)+" s")
+        if args.until_404 and (args.retries_max == 0 or retries < args.retries_max):
+            print("Retrying in "+str(args.retry_delay)+" s")
 
-                # A List of Items
-                items = list(range(0, args.retry_delay))
-                l = len(items)
+            # A List of Items
+            items = list(range(0, args.retry_delay))
+            l = len(items)
 
-                # Initial call to print 0% progress
-                printProgressBar(0, l, prefix='Progress:',
+            # Initial call to print 0% progress
+            printProgressBar(0, l, prefix='Progress:',
+                            suffix='Complete', length=50)
+
+            for i, _ in enumerate(items):
+                # Do stuff...
+                time.sleep(1)
+                # Update Progress Bar
+                printProgressBar(i+1, l, prefix='Progress:',
                                 suffix='Complete', length=50)
-
-                for i, _ in enumerate(items):
-                    # Do stuff...
-                    time.sleep(1)
-                    # Update Progress Bar
-                    printProgressBar(i+1, l, prefix='Progress:',
-                                    suffix='Complete', length=50)
-                retries += 1
-            else:
-                break
+            retries += 1
+        else:
+            break
 
     if args.after_action == "SHOW_FILES":
         directory = os.path.join(board_str, thread_number_str, " ")
