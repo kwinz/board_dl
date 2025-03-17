@@ -24,6 +24,7 @@ import html
 from tkinter import Tk, TclError
 import codecs
 import json
+from time import sleep
 
 userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36'
 # imgReg = r"(\/\/is[1-3]\.4chan\.org\/[a-z]{1,6}\/[a-z|0-9]+\.(?:gif|jpg|webm))\" target=\"_blank\">([^<].*?)<\/a>"
@@ -31,6 +32,7 @@ imgReg = r"<a (?:title=\"([^\"]*?)\" )*href=\"(\/\/(?:s|is[1-3]|i)\.(?:4cdn\.org
 # <a title="Gillian_Anderson_x_Samantha_Alexandra_04.webm" href="//is3.4chan.org/gif/1528018466350.webm" target="_blank" data-ytta-id="-">Gillian_Anderson_x_Samant(...).webm</a>
 myheaders = {'User-Agent': userAgent}
 logFileName = 'board_dl.log'
+parallelDownloads = False
 
 def main():
 
@@ -132,11 +134,11 @@ def main():
                     image_original_name = post['filename'] + post['ext'];
                     image_url = "//i.4cdn.org/"+board_str+"/"+str(post['tim']) + post['ext'];
 
-                    print("filename: "+ image_original_name)
-                    print("filename: "+ image_url)
+                    #print("name: "+ image_original_name)
+                    #print("file url: "+ image_url)
 
                     match=[]
-                    match.append("title?")
+                    match.append("")
                     match.append(image_url)
                     match.append(image_original_name)
                     matches.append(match)
@@ -145,7 +147,6 @@ def main():
             print("Parsing finished in "+str(end_match_time - begin_match_time)+" s")
             print("Found "+str(len(matches))+" media urls")
         else:
-
             response = http_pool.request('GET', url, headers=myheaders)
             end_download_time = timer()
             print("Downloaded '"+url+"' in " +
@@ -196,15 +197,23 @@ def main():
             fout.write("Found "+str(len(matches))+" media urls\n")
             fout.write("\n"+str(matches))
 
-        for match in matches:
-            process = Process(target=downloadAndSaveMediaFile,
-                            args=(board_str, thread_number_str, match, args))
-            process.start()
-            processes.append(process)
+        if parallelDownloads:
+            for match in matches:
+                process = Process(target=downloadAndSaveMediaFile,
+                                args=(board_str, thread_number_str, match, args))
+                process.start()
+                processes.append(process)
 
-        for process in processes:
-            # wait for downloads to finish, but not longer than 30 minutes
-            process.join(60*30)
+            for process in processes:
+                # wait for downloads to finish, but not longer than 30 minutes
+                process.join(60*30)
+                if process.exitcode:
+                    print("Error downloading media")
+                    exit(2)
+        else:
+            for match in matches:
+                downloadAndSaveMediaFile(board_str, thread_number_str, match, args)
+       
 
         end_download_media_time = timer()
 
@@ -281,10 +290,16 @@ def downloadAndSaveMediaFile(board_str, thread_number_str, match, args):
 
 
 def download(fullImgUrl, target_path: str):
-    print("Downloading: "+fullImgUrl + "\nPath: " + target_path)
-    http_pool = urllib3.PoolManager(
-        cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
-    response = http_pool.request('GET', fullImgUrl, headers=myheaders)
+    while True:
+        print("Downloading: "+fullImgUrl + "\nPath: " + target_path)
+        http_pool = urllib3.PoolManager(
+            cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
+        response = http_pool.request('GET', fullImgUrl, headers=myheaders)
+        if response.status == 429:
+            print("Too many requests. Waiting 6 seconds and trying again")
+            sleep(6)
+        else:
+            break
 
     if response.status != 200:
         # we now sometimes get response.status 429
