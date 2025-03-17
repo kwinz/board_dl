@@ -23,6 +23,7 @@ import time
 import html
 from tkinter import Tk, TclError
 import codecs
+import json
 
 userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36'
 # imgReg = r"(\/\/is[1-3]\.4chan\.org\/[a-z]{1,6}\/[a-z|0-9]+\.(?:gif|jpg|webm))\" target=\"_blank\">([^<].*?)<\/a>"
@@ -30,7 +31,6 @@ imgReg = r"<a (?:title=\"([^\"]*?)\" )*href=\"(\/\/(?:s|is[1-3]|i)\.(?:4cdn\.org
 # <a title="Gillian_Anderson_x_Samantha_Alexandra_04.webm" href="//is3.4chan.org/gif/1528018466350.webm" target="_blank" data-ytta-id="-">Gillian_Anderson_x_Samant(...).webm</a>
 myheaders = {'User-Agent': userAgent}
 logFileName = 'board_dl.log'
-
 
 def main():
 
@@ -85,6 +85,7 @@ def main():
     location_of_backslash_after_thread_number = url.find(
         "/", location_of_thread_substring_in_url+len("thread")+1)
 
+    #fixme: if url is given without backslash the thread number is not correctly parsed
     thread_number_str = url[location_of_thread_substring_in_url +
                             len("thread")+1:location_of_backslash_after_thread_number]
     print("Thread number: "+thread_number_str)
@@ -106,8 +107,23 @@ def main():
 
     while True:
         begin_download_time = timer()
-
         if api:
+            
+            api_threads_url = "https://a.4cdn.org/"+board_str+"/thread/"+thread_number_str+".json"
+
+            response = http_pool.request('GET', api_threads_url, headers=myheaders)
+            end_download_time = timer()
+            print("Downloaded '"+api_threads_url+"' in " +
+                str(end_download_time - begin_download_time)+" s")
+
+            if response.status != 200:
+                print("Unknown status code: "+str(response.status))
+                exit(2)
+
+            json_object = json.loads(response.data.decode('utf-8'));
+
+            print("Downloaded '"+str(json_object)+"'")
+
             break
         else:
 
