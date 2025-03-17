@@ -52,12 +52,14 @@ def main():
         "--retries-max", type=check_natural, default=30, help="Max retries before we give up, even if thread is not 404 yet. 0 = no limit. Combine with --until-404. Default=30")
     parser.add_argument(
         "--save-html", type=str2bool, default=True, help="Save html file (just the raw thread file, no dependencies). Default=True")
+    parser.add_argument(
+        "--method", type=str, default="api", help="Method can either be 'api' or 'crawl'")
 
     args = parser.parse_args()
 
     # url = 'https://boards.4chan.org/gif/thread/12891600/1010-bodies-and-face'
 
-    if(args.url):
+    if args.url:
         url = args.url
     else:
         url = ""
@@ -92,95 +94,108 @@ def main():
     http_pool = urllib3.PoolManager(
             cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
 
+    if args.method == "api":
+        api = True
+    elif args.method == "crawl":
+        api = False
+    else:
+        print("Method can either be 'api' or 'crawl'")
+        exit(1)
+
     media_reg_pattern = re.compile(imgReg)
 
     while True:
         begin_download_time = timer()
-        response = http_pool.request('GET', url, headers=myheaders)
-        end_download_time = timer()
-        print("Downloaded '"+url+"' in " +
-              str(end_download_time - begin_download_time)+" s")
 
-        # print(str(response.data.decode('utf-8')))
-        # exit(0)
-
-        if response.status == 404:
-            print("Thread timed out. Quitting.")
+        if api:
             break
-
-        if response.status != 200:
-            print("Unknown status code: "+str(response.status))
-            exit(2)
-
-        begin_match_time = timer()
-        
-        matches = media_reg_pattern.findall(str(response.data.decode('utf-8')))
-        matches = list(set(matches))
-
-        # for match in matches:
-        #    print(match)
-        # exit(0)
-
-        end_match_time = timer()
-        print("Parsing finished in "+str(end_match_time - begin_match_time)+" s")
-        print("Found "+str(len(matches))+" media urls")
-
-        if args.symlink_names:
-            ensure_dir(os.path.join(board_str, thread_number_str, "symlinks"))
         else:
-            ensure_dir(os.path.join(board_str, thread_number_str))
 
-        if args.save_html:
-            with open(os.path.join(board_str, thread_number_str, "thread.html"), 'wb') as fout:
-                fout.write(response.data)
+            response = http_pool.request('GET', url, headers=myheaders)
+            end_download_time = timer()
+            print("Downloaded '"+url+"' in " +
+                str(end_download_time - begin_download_time)+" s")
 
-        processes = []
-        begin_download_media_time = timer()
+            # print(str(response.data.decode('utf-8')))
+            # exit(0)
 
-        # https://stackoverflow.com/a/934173/643011
-        # At this point matches contains unescaped unicode chars. Open file as utf-8 and write BOM to avoid following error:
-        # UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f3a7' in position 362: character maps to < undefined >
-        with codecs.open(os.path.join(board_str, thread_number_str, logFileName), 'w', 'utf-8-sig') as fout:
-            fout.write("Time: "+str(datetime.datetime.utcnow())+"\n")
-            fout.write(str(args.url)+"\n")
-            fout.write("Found "+str(len(matches))+" media urls\n")
-            fout.write("\n"+str(matches))
+            if response.status == 404:
+                print("Thread timed out. Quitting.")
+                break
 
-        for match in matches:
-            process = Process(target=downloadAndSaveMediaFile,
-                              args=(board_str, thread_number_str, match, args))
-            process.start()
-            processes.append(process)
+            if response.status != 200:
+                print("Unknown status code: "+str(response.status))
+                exit(2)
 
-        for process in processes:
-            # wait for downloads to finish, but not longer than 30 minutes
-            process.join(60*30)
+            begin_match_time = timer()
+            
+            matches = media_reg_pattern.findall(str(response.data.decode('utf-8')))
+            matches = list(set(matches))
 
-        end_download_media_time = timer()
+            # for match in matches:
+            #    print(match)
+            # exit(0)
 
-        print("Downloaded all media in " +
-              str(end_download_media_time - begin_download_media_time)+" s")
+            end_match_time = timer()
+            print("Parsing finished in "+str(end_match_time - begin_match_time)+" s")
+            print("Found "+str(len(matches))+" media urls")
 
-        if args.until_404 and (args.retries_max == 0 or retries < args.retries_max):
-            print("Retrying in "+str(args.retry_delay)+" s")
+            if args.symlink_names:
+                ensure_dir(os.path.join(board_str, thread_number_str, "symlinks"))
+            else:
+                ensure_dir(os.path.join(board_str, thread_number_str))
 
-            # A List of Items
-            items = list(range(0, args.retry_delay))
-            l = len(items)
+            if args.save_html:
+                with open(os.path.join(board_str, thread_number_str, "thread.html"), 'wb') as fout:
+                    fout.write(response.data)
 
-            # Initial call to print 0% progress
-            printProgressBar(0, l, prefix='Progress:',
-                             suffix='Complete', length=50)
+            processes = []
+            begin_download_media_time = timer()
 
-            for i, _ in enumerate(items):
-                # Do stuff...
-                time.sleep(1)
-                # Update Progress Bar
-                printProgressBar(i+1, l, prefix='Progress:',
-                                 suffix='Complete', length=50)
-            retries += 1
-        else:
-            break
+            # https://stackoverflow.com/a/934173/643011
+            # At this point matches contains unescaped unicode chars. Open file as utf-8 and write BOM to avoid following error:
+            # UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f3a7' in position 362: character maps to < undefined >
+            with codecs.open(os.path.join(board_str, thread_number_str, logFileName), 'w', 'utf-8-sig') as fout:
+                fout.write("Time: "+str(datetime.datetime.utcnow())+"\n")
+                fout.write(str(args.url)+"\n")
+                fout.write("Found "+str(len(matches))+" media urls\n")
+                fout.write("\n"+str(matches))
+
+            for match in matches:
+                process = Process(target=downloadAndSaveMediaFile,
+                                args=(board_str, thread_number_str, match, args))
+                process.start()
+                processes.append(process)
+
+            for process in processes:
+                # wait for downloads to finish, but not longer than 30 minutes
+                process.join(60*30)
+
+            end_download_media_time = timer()
+
+            print("Downloaded all media in " +
+                str(end_download_media_time - begin_download_media_time)+" s")
+
+            if args.until_404 and (args.retries_max == 0 or retries < args.retries_max):
+                print("Retrying in "+str(args.retry_delay)+" s")
+
+                # A List of Items
+                items = list(range(0, args.retry_delay))
+                l = len(items)
+
+                # Initial call to print 0% progress
+                printProgressBar(0, l, prefix='Progress:',
+                                suffix='Complete', length=50)
+
+                for i, _ in enumerate(items):
+                    # Do stuff...
+                    time.sleep(1)
+                    # Update Progress Bar
+                    printProgressBar(i+1, l, prefix='Progress:',
+                                    suffix='Complete', length=50)
+                retries += 1
+            else:
+                break
 
     if args.after_action == "SHOW_FILES":
         directory = os.path.join(board_str, thread_number_str, " ")
