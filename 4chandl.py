@@ -87,9 +87,12 @@ def main():
     location_of_backslash_after_thread_number = url.find(
         "/", location_of_thread_substring_in_url+len("thread")+1)
 
-    #fixme: if url is given without backslash the thread number is not correctly parsed
-    thread_number_str = url[location_of_thread_substring_in_url +
-                            len("thread")+1:location_of_backslash_after_thread_number]
+    if location_of_backslash_after_thread_number!=-1:
+        thread_number_str = url[location_of_thread_substring_in_url +
+                                len("thread")+1:location_of_backslash_after_thread_number]
+    else:
+        thread_number_str = url[location_of_thread_substring_in_url +
+                                len("thread")+1:]
     print("Thread number: "+thread_number_str)
 
     retries = 0
