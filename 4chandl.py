@@ -302,6 +302,11 @@ def download(fullImgUrl, target_path: str):
             print("Too many requests. Waiting 6 seconds and trying again")
             sleep(6)
         else:
+            # Mid 2025 the restictions are tightened again and the board now hands out long
+            # lasting IP bans if you attempt a few (20) requests in a short duration.
+            # Make sure we are waiting at least 1 second between requests to not trigger
+            # the ban.
+            sleep(1)
             break
 
     if response.status != 200:
