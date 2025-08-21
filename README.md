@@ -51,14 +51,18 @@ optional arguments:
   --method METHOD       Method can either be 'api' or 'crawl'. Default=api
 ```
 
+`--symlink-names` is recommended (works as user on Linux, but requires Administrator privileges on Windows).
+
 # Install
 
-You need python3 and python3-tk (e.g. `sudo apt-get install python3.7 python3-tk`)
+On Linux (Ubuntu) install `python3` and `python3-tk` (e.g. `sudo apt-get install python3.7 python3-tk`)
 
-On newer Windows 10 installs it is sufficient to install Python 3.9 from the Windows store and then packages `urllib3` and `certifi` with
+On newer Windows 10 and Windows 11 installs it is sufficient to install Python 3.9+ from the Windows store and then packages `urllib3` and `certifi` with
 `pip install -r requirements.txt`
 
-# Debugging
+On Linux (Nixos) you may run this with e.g. `nix-shell -p python312Full -p python312Packages.urllib3 -p python312Packages.certifi --run "python 4chandl.py"`
+
+# Debugging the legacy `crawl` method
 
 Saves a `thread.html`, check with https://regex101.com/ if the `imgReg` regex in `4chandl.py` is broken due to board changes.
 
@@ -71,3 +75,4 @@ Found 1 media urls
 
 [('D71CBC8C-3CBE-4CCE-AE79-1A142C3DFC7C.jpg', '//is2.4chan.org/trv/1528553461662.jpg', 'D71CBC8C-3CBE-4CCE-AE79-1(...).jpg')]
 ```
+
